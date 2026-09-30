@@ -1,0 +1,26 @@
+services:
+  custodio-simulado:
+    build:
+      context: ../..
+      dockerfile: infra/custodio-simulado/Dockerfile
+    restart: unless-stopped
+    environment:
+      CUSTODIO_ADDR: "0.0.0.0"
+      CUSTODIO_PORT: "8090"
+      CUSTODIO_PERMITIR_EXPOSICION: "true"
+      NUCLEO_CONFIRMACION_URL: ${NUCLEO_CONFIRMACION_URL:?Defina la URL interna del callback}
+      CUSTODIO_TOKEN: ${CUSTODIO_TOKEN:?Defina el mismo token que usa el API}
+    ports:
+      - "127.0.0.1:8090:8090"
+    networks:
+      - centinela
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8090/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  centinela:
+    external: true
+    name: centinela

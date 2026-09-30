@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#121020" />
+    <title>Confirmar recarga · Vera</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <main class="checkout">
+        <header class="site-header">
+          <div class="brand" aria-label="Vera">Vera<span>.</span></div>
+          <div class="header-context">Confirmación de pago</div>
+          <span class="header-badge">SIMULACIÓN</span>
+        </header>
+
+        <section class="payment-panel" aria-labelledby="payment-title">
+          <template v-if="estado === 'inicio' || estado === 'enviando'">
+            <div class="panel-topline">
+              <span class="flow-label">PAGO CON PSE</span>
+              <span class="secure-label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>Modo de prueba</span>
+            </div>
+            <h1 id="payment-title">Confirma tu recarga</h1>
+            <p class="panel-intro">Revisa la información antes de autorizar el pago.</p>
+
+            <div class="amount-box"><span>Total a pagar</span><strong>{{ montoPresentado }} <small>COP</small></strong></div>
+            <div class="section-label">Detalles de la operación</div>
+            <dl class="details">
+              <div><dt>Concepto</dt><dd>Recarga a Vera</dd></div>
+              <div><dt>Referencia</dt><dd class="reference">{{ referencia }}</dd></div>
+            </dl>
+
+            <div class="section-label method-heading">Método de pago</div>
+            <div class="payment-method" aria-label="PSE simulado seleccionado">
+              <span class="method-logo" aria-hidden="true">PSE<span>.</span></span>
+              <span class="method-copy"><strong>PSE simulado</strong><small>Transferencia bancaria de prueba</small></span>
+              <span class="selected-mark" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="m4 10 4 4 8-8"/></svg></span>
+            </div>
+
+            <div class="simulation-note"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><span>Estás en un entorno simulado. No se realiza ningún movimiento bancario real.</span></div>
+            <p v-if="error" class="error" role="alert">{{ error }}</p>
+
+            <form action="/pse/autorizar" method="post" @submit.prevent="resolver('autorizar')">
+              <input type="hidden" name="referencia" :value="referencia" /><input type="hidden" name="monto" :value="monto" />
+              <button class="primary" type="submit" :disabled="estado === 'enviando'"><span>{{ estado === 'enviando' ? 'Confirmando pago…' : 'Autorizar pago' }}</span><svg v-if="estado !== 'enviando'" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span v-else class="spinner" aria-hidden="true"></span></button>
+            </form>
+            <form action="/pse/cancelar" method="post" @submit.prevent="resolver('cancelar')">
+              <input type="hidden" name="referencia" :value="referencia" /><input type="hidden" name="monto" :value="monto" />
+              <button class="secondary" type="submit" :disabled="estado === 'enviando'">Cancelar y volver</button>
+            </form>
+          </template>
+
+          <template v-else>
+            <div class="result-status" :class="estado" aria-hidden="true"><svg v-if="estado === 'aprobado'" viewBox="0 0 32 32"><path d="m7 16 6 6 12-12"/></svg><svg v-else viewBox="0 0 32 32"><path d="M9 9 23 23M23 9 9 23"/></svg></div>
+            <p class="result-eyebrow">{{ estado === 'aprobado' ? 'RECARGA AUTORIZADA' : 'OPERACIÓN CANCELADA' }}</p>
+            <h1 id="payment-title">{{ estado === 'aprobado' ? 'Pago confirmado' : 'Pago cancelado' }}</h1>
+            <p class="panel-intro result-intro">{{ estado === 'aprobado' ? 'Vera recibió la confirmación. Ya puedes volver a la aplicación.' : 'La recarga no se realizó. Puedes volver a Vera e intentarlo de nuevo.' }}</p>
+            <div class="amount-box result-amount"><span>Monto de la operación</span><strong>{{ montoPresentado }} <small>COP</small></strong></div>
+            <dl class="details result-details"><div><dt>Referencia</dt><dd class="reference">{{ referencia }}</dd></div><div><dt>Estado</dt><dd>{{ estado === 'aprobado' ? 'Aprobado' : 'Rechazado' }}</dd></div><div v-if="cus"><dt>CUS</dt><dd class="reference">{{ cus }}</dd></div></dl>
+            <div class="simulation-note"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><span>Esta confirmación pertenece a un entorno simulado.</span></div>
+          </template>
+        </section>
+
+        <footer class="site-footer"><span>Vera · Entorno de pruebas</span><span>Pago simulado con PSE</span></footer>
+      </main>
+    </div>
+    <script src="/vue.js"></script>
+    <script src="/src/main.js"></script>
+  </body>
+</html>
