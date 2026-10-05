@@ -53,7 +53,7 @@ function resultPage(title, message, payment, cus = '') {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · PSE simulado</title><style>body{font:16px system-ui;background:#11142b;color:#f7f7ff;margin:0;padding:40px 22px}main{max-width:520px;margin:12vh auto}h1{font-size:2.5rem}p{line-height:1.6}dl{border-top:1px solid #555}div{display:flex;justify-content:space-between;gap:20px;border-bottom:1px solid #555;padding:12px 0}dd{margin:0;overflow-wrap:anywhere}</style></head><body><main><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><dl><div><dt>Referencia</dt><dd>${escapeHtml(payment.referencia)}</dd></div><div><dt>Monto</dt><dd>${escapeHtml(payment.monto)} centavos</dd></div>${cus ? `<div><dt>CUS</dt><dd>${escapeHtml(cus)}</dd></div>` : ''}</dl></main></body></html>`;
 }
 
-export function createServer(config, fetcher = fetch) {
+export function createServer(config, fetcher = fetch, logger = console) {
   const decisions = new Map();
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -92,11 +92,13 @@ export function createServer(config, fetcher = fetch) {
           body: JSON.stringify(body), signal: AbortSignal.timeout(10000),
         });
         if (!response.ok) {
+          logger.error({ evento: 'callback_fallido', referencia, estado, backend_status: response.status });
           const status = response.status === 404 || response.status === 409 ? 409 : 502;
           const msg = status === 409 ? 'No se pudo confirmar esta recarga. Verifica la referencia y el monto.' : 'No se pudo contactar al servicio de recargas. Intenta de nuevo.';
           return send(res, status, JSON.stringify({ error: msg }), 'application/json; charset=utf-8');
         }
-      } catch {
+      } catch (error) {
+        logger.error({ evento: 'callback_fallido', referencia, estado, error_name: error?.name, error_code: error?.cause?.code });
         return send(res, 502, JSON.stringify({ error: 'No se pudo contactar al servicio de recargas. Intenta de nuevo.' }), 'application/json; charset=utf-8');
       }
       decisions.set(key, { estado, cus });
