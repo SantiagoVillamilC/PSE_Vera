@@ -72,7 +72,8 @@ test('un fallo del backend no se muestra como pago aprobado', async () => {
 });
 
 test('un fallo del callback se registra sin token, CUS ni cuerpo', async () => {
-  const distinctiveToken = 'tok-distintivo-9f8e7d6c5b4a39281706f5e4d3c2b1a0';
+  // Token ficticio y único: solo verifica que el log del callback no lo contiene.
+  const distinctiveToken = 'token-de-prueba-solo-para-el-log';
   const cases = [
     { nombre: 'excepcion', fetcher: async () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } }); } },
     { nombre: 'respuesta 500', fetcher: async () => ({ ok: false, status: 500 }) },
