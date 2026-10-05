@@ -1,5 +1,6 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { inspect } from 'node:util';
 import { createServer, loadConfig, validPayment } from './index.js';
 
 const token = '0123456789abcdef0123456789abcdef';
@@ -68,4 +69,36 @@ test('un fallo del backend no se muestra como pago aprobado', async () => {
     assert.equal(response.status, 502);
     assert.match((await response.json()).error, /Intenta de nuevo/);
   } finally { failing.close(); }
+});
+
+test('un fallo del callback se registra sin token, CUS ni cuerpo', async () => {
+  const distinctiveToken = 'tok-distintivo-9f8e7d6c5b4a39281706f5e4d3c2b1a0';
+  const cases = [
+    { nombre: 'excepcion', fetcher: async () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } }); } },
+    { nombre: 'respuesta 500', fetcher: async () => ({ ok: false, status: 500 }) },
+  ];
+  for (const { nombre, fetcher } of cases) {
+    const calls = [];
+    let cus;
+    const logger = { error: (...args) => calls.push(args) };
+    const app = createServer({ ...config, token: distinctiveToken }, async (url, options) => {
+      cus = JSON.parse(options.body).cus;
+      return fetcher(url, options);
+    }, logger);
+    await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
+    try {
+      const response = await fetch(`http://127.0.0.1:${app.address().port}/pse/autorizar`, {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+        body: new URLSearchParams({ referencia: 'dep-log', monto: '100' }),
+      });
+      assert.equal(response.status, 502, nombre);
+      assert.ok(cus, 'debe existir un CUS');
+      assert.equal(calls.length, 1, `${nombre}: una llamada de log`);
+      const text = calls[0].map(arg => inspect(arg, { depth: null, showHidden: true })).join(' ');
+      assert.ok(text.includes('referencia'), `${nombre}: referencia presente`);
+      assert.ok(!text.includes(distinctiveToken), `${nombre}: sin token`);
+      assert.ok(!text.includes(cus), `${nombre}: sin CUS`);
+      assert.ok(!text.includes('moneda'), `${nombre}: sin cuerpo`);
+    } finally { app.close(); }
+  }
 });

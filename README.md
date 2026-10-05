@@ -37,11 +37,11 @@ En el VPS, usar `NUCLEO_CONFIRMACION_URL=http://api:8080/v1/depositos/confirmaci
 
 Crear un registro DNS `A` de `pse.veraapp.tech` a la IP pública del VPS. Emitir un certificado Let's Encrypt para ese nombre con el webroot de nginx antes de instalar `infra/nginx/pse.conf.example`; después comprobar con `nginx -t` y recargar nginx. El ejemplo resuelve `custodio-simulado` en la red Docker `centinela`.
 
-Configurar `PSE_URL=https://pse.veraapp.tech/pse` en el entorno del API que genera la redirección. En `origin/dev` del backend todavía no aparece `PSE_URL`; esa conexión corresponde a B3. El token `CUSTODIO_TOKEN` debe ser exactamente el mismo en el API y este servicio.
+Configurar `PSE_URL=https://pse.veraapp.tech` (solo el origen, sin ruta) en el entorno del API que genera la redirección. El API agrega `/pse?referencia=...&monto=...` a ese origen para armar la `url_pago`, y rechaza el arranque si `PSE_URL` trae una ruta. El token `CUSTODIO_TOKEN` debe ser exactamente el mismo en el API y este servicio.
 
 ## Verificación de aceptación
 
-1. Crear un depósito en el API y abrir desde un celular con datos móviles la URL `https://pse.veraapp.tech/pse?referencia=<referencia>&monto=<centavos>`.
+1. Crear un depósito en el API y abrir desde un celular con datos móviles la `url_pago` devuelta, que tiene la forma `<PSE_URL>/pse?referencia=<referencia>&monto=<centavos>` (en producción, `https://pse.veraapp.tech/pse?referencia=<referencia>&monto=<centavos>`).
 2. Confirmar que se ven la referencia y el monto. Tocar **Autorizar pago**.
 3. Consultar `GET /v1/depositos/{id}` en `origin/dev` con la autenticación del usuario y comprobar `estado: "confirmada"`.
 4. Repetir con otro depósito y **Cancelar pago**; el callback debe tener `estado: "rechazado"` y carecer de `cus`.
